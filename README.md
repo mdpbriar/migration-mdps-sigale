@@ -20,4 +20,10 @@ Créer l'environnement virtuel et installer les dépendences avec `uv sync` depu
 
 Avec uv, vous pouvez ensuite lancer les commandes depuis l'environnement virtuel ( `source .venv/bin/activate`), ou lancer les commandes précédées de `uv run`.
 Ex:
-`uv run python main.py`
+`uv run main.py`
+
+### Configuration
+
+copier .env.exemple en .env et saisir les identifiants de connexion
+
+Tester les connections aux bases de données avec `python main.py test` ( ou `uv run main.py test`) 

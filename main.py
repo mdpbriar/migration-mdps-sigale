@@ -3,8 +3,20 @@ from src.logger import Logger
 from src.db.proeco_connector import ProecoConnector
 from sqlalchemy import text
 import pandas as pd
+import sys
 
 from src.db.sigale_connector import SigaleConnector
+
+
+def test():
+    # On initie le connecteur Proeco
+    proeco_connector = ProecoConnector('PROF.FDB')
+    # test de la connexion
+    proeco_connector.test_connection()
+
+    ## Même chose pour Sigale
+    sigale_connector = SigaleConnector()
+    sigale_connector.test_connection()
 
 
 def main():
@@ -72,4 +84,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1] == 'test':
+        test()
+    else:
+        main()

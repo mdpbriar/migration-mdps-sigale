@@ -2,10 +2,9 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
+from config import FIREBIRD_CONNECT_ARGS
+
 DB_DRIVER: str = "firebird+fdb"
-CONNECT_ARGS: dict = {"charset" : "ISO8859_1"}
-
-
 
 class ProecoConnector:
     """
@@ -39,7 +38,7 @@ class ProecoConnector:
         """
         return create_engine(
             f"{DB_DRIVER}://{self.db_user}:{self.db_password}@{self.db_url}:{self.db_port}/{self.database_path}",
-            connect_args=CONNECT_ARGS,
+            connect_args=FIREBIRD_CONNECT_ARGS,
         )
 
     def test_connection(self):

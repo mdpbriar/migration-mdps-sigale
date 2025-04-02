@@ -19,3 +19,8 @@ SIGALE_PERSONNES_DEFAULT_FIELDS:dict = {
     'est_confidentielle': False,
     'est_membre_personnel': True,
 }
+
+MAPPING_PROECO_SIGALE:dict = {
+    'matric': 'matric_etud',
+
+}

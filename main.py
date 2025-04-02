@@ -38,15 +38,16 @@ def main():
     sigale_engine = sigale_connector.create_engine()
 
 
-    with sigale_engine.connect() as conn:
-        # On créé une colonne
-        conn.begin()
-        conn.execute(text("ALTER TABLE personnes.personnes ADD COLUMN IF NOT EXISTS matric_prof INTEGER UNIQUE;"))
-        conn.commit()
-        logger.log("Colonne matric_prof créée si non existante")
+    # with sigale_engine.connect() as conn:
+    #     # On créé une colonne
+    #     conn.begin()
+    #     conn.execute(text("ALTER TABLE personnes.personnes ADD COLUMN IF NOT EXISTS matric_prof INTEGER UNIQUE;"))
+    #     conn.commit()
+    #     logger.log("Colonne matric_prof créée si non existante")
 
-    sql_mdps = text(f"""
-    select 
+    sql_mdps_proeco = text(f"""
+    select
+    matric,
     nom,
     prenom,
     UPPER(sexe) as sexe,
@@ -58,6 +59,14 @@ def main():
     and CHAR_LENGTH(regnat1) = 11
     """)
 
+    sql_mdps_sigale = text("""
+    select registre_national_numero
+    from personnes.personnes
+    where est_membre_personnel = true
+    and registre_national_numero != ''
+    and registre_national_numero is not null
+    """)
+
     sql_parameter_sigale = text("""
     select pv.id, pv.code
     from core.parameter_values pv
@@ -66,7 +75,7 @@ def main():
     """)
 
     # On récupère le résulat de la SQL dans un dataframe
-    enseignants_proeco = pd.read_sql_query(sql_mdps, proeco_engine)
+    enseignants_proeco = pd.read_sql_query(sql_mdps_proeco, proeco_engine)
 
     # On vérifie si il y a des doublons sur le numéro national
     duplicated = enseignants_proeco[enseignants_proeco.duplicated(subset=['registre_national_numero'])]
@@ -76,6 +85,8 @@ def main():
     enseignants_proeco.drop_duplicates(subset=['registre_national_numero'], inplace=True, keep='last')
     # On transforme les dates de naissances proeco en dates normales
     enseignants_proeco['date_naissance'] = enseignants_proeco['date_naissance'].apply(lambda x: DateUtils.convert_dateproeco_to_date(x))
+    # On renomme les champs selon le mapping pour correspondre à Sigale
+    enseignants_proeco.rename(config.MAPPING_PROECO_SIGALE, inplace=True)
 
 
     #### AJOUT DES SEXE_ID
@@ -91,7 +102,7 @@ def main():
 
 
     # on récupère les personnes de Sigale
-    personnes_sigales = pd.read_sql_query("select registre_national_numero from personnes.personnes where matric_etud is null", sigale_engine)
+    personnes_sigales = pd.read_sql_query(sql_mdps_sigale, sigale_engine)
 
     # On merge pour voir quels enseignants sont déjà dans Sigale
     enseignants_proeco = enseignants_proeco.merge(personnes_sigales, on='registre_national_numero', how='left', indicator=True, validate='1:1')

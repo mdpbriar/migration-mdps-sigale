@@ -1,5 +1,6 @@
 # arguments de connexion à la DB Firebird
 from datetime import datetime
+from typing import Dict
 
 # Options de connection à Firebird
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
@@ -58,5 +59,27 @@ SIGALE_UPDATE_FIELDS:list = [
     'updated_by_display',
 ]
 
-# Est-ce qu'un index unique existe en DB pour registre_national_numero ? L'ajout d'un index unique permet une exécution plus rapide
-UNIQUE_INDEX_ON_REG_NATIONAL:bool = False
+SIGALE_EMAIL_UPDATE_FIELDS:list = [
+    'est_individuel',
+    'est_principal',
+    'valeur',
+    'updated_by',
+    'updated_on',
+    'updated_by_display',
+]
+
+
+EMAILS_FIELDS:Dict[str,Dict] = {
+    'email':{
+        'code_domaine': 'prive',
+        'est_individuel': True,
+        'est_principal': False,
+    },
+    'email2':{
+        'code_domaine': 'institutionnel',
+        'est_individuel': True,
+        'est_principal': False,
+    }
+}
+
+EXPORT_PATH:str = 'exports'

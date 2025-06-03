@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 class DateUtils:
 
@@ -11,3 +11,12 @@ class DateUtils:
         month = int(datestring[-4:-2])
         year = int(datestring[:-4]) + 1900
         return datetime(year, month, day)
+
+
+    @staticmethod
+    def convert_date_to_dateproeco(date: datetime|date) -> int:
+        year = str(date.year - 1900)
+        month = str(date.month).zfill(2)
+        day = str(date.day).zfill(2)
+
+        return int(year + month + day)

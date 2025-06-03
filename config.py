@@ -22,5 +22,20 @@ SIGALE_PERSONNES_DEFAULT_FIELDS:dict = {
 
 MAPPING_PROECO_SIGALE:dict = {
     'matric': 'matric_etud',
+    'nom': 'nom',
+    'prenom': 'prenom',
+}
 
+MAPPING_ETATS_CIVILS:dict = {
+    'L': 'cohabitant_legal',
+    'C': 'celibataire',
+    'D': 'divorce',
+    'M': 'marie',
+    'V': 'veuf',
+    'O': 'cohabitant',
+    'S': 'separe',
+    'Y': 'separe_corp',
+    'G': 'religieux',
+    'Z': 'decede',
+    'R': 'remarie',
 }

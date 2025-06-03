@@ -82,4 +82,19 @@ EMAILS_FIELDS:Dict[str,Dict] = {
     }
 }
 
+PHONE_FIELDS: Dict[str, Dict] = {
+    'teldomi': {
+        'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel
+        'code_type': 'fixe', # fixe ou mobile
+        'est_individuel': True,
+        'est_principal': False,
+    },
+    'gsm': {
+        'code_domaine': 'prive',
+        'code_type': 'mobile',
+        'est_individuel': True,
+        'est_principal': False,
+    },
+}
+
 EXPORT_PATH:str = 'exports'

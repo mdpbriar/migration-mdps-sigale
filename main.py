@@ -3,14 +3,14 @@ from typing import Literal
 import argparse
 
 from src.date_utils import DateUtils
-from src.db.requetes_sql import SQL_MDPS_PROECO, SQL_CONTRATS_EN_COURS_PROECO
+from src.db.requetes_sql import SQL_MDPS_PROECO, SQL_CONTRATS_EN_COURS_PROECO, SQL_MDPS_SIGALE
 from src.logger import Logger
 from src.db.proeco_connector import ProecoConnector
 import pandas as pd
 import sys
 
 from src.db.sigale_connector import SigaleConnector
-from src.migrations import migrate_emails, migrate_personnes
+from src.migrations import migrate_emails, migrate_personnes, migrate_phones
 
 
 def test():
@@ -89,9 +89,20 @@ def main():
     attributs_personnes = ['matric','nom','prenom','sexe','nation','paynaiss','lieunaiss','etatcivil','registre_national_numero','date_naissance']
     migrate_personnes(enseignants_proeco[attributs_personnes], sigale_engine, logger, export, dry_run, update)
 
+    ## AJOUT DES ID PERSONNES
+    # On récupère les personnes existantes dans Sigale
+    personnes = pd.read_sql_query(SQL_MDPS_SIGALE, sigale_engine)
+    # On ajoute les ids dans les emails
+    enseignants_proeco = enseignants_proeco.merge(personnes, on='registre_national_numero', how='inner', validate='m:1')
+
     # On migre les emails, gestion de l'ajout/mise à jour dans personnes.personne_emails
-    attributs_emails = ['registre_national_numero', 'email', 'email2']
+    attributs_emails = ['personne_id', 'email', 'email2']
     migrate_emails(enseignants_proeco[attributs_emails], sigale_engine, logger, export, dry_run, update)
+
+    # On migre les téléphones, gestion de l'ajout/mise à jour dans personnes.personne_telephones
+    attributs_phones = ['personne_id', 'teldomi', 'telresi', 'gsm', 'telbureau']
+    migrate_phones(enseignants_proeco[attributs_phones], sigale_engine, logger, export, dry_run, update)
+
     return None
 
 

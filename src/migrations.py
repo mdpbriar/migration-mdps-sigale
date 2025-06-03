@@ -132,7 +132,7 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     # Avec melt, on répartit nos colonnes email et email2 dans des nouvelles lignes
     # On passe d'une structure registre_national, email, email2
     # à registre_national, champ_proeco(email ou email2), valeur
-    personne_emails = personne_emails.melt(id_vars=['registre_national_numero'], value_vars=['email', 'email2'], var_name='champ_proeco', value_name='valeur')
+    personne_emails = personne_emails.melt(id_vars=['personne_id'], value_vars=['email', 'email2'], var_name='champ_proeco', value_name='valeur')
     # en partant de la config, on ajoute le type d'email, None si le champ n'est pas dans la config
     personne_emails['code_domaine'] = personne_emails.apply(lambda row: config.EMAILS_FIELDS.get(row['champ_proeco']).get('code_domaine') if row['champ_proeco'] in config.EMAILS_FIELDS else None, axis=1)
     # On supprime là où le champ n'est pas déclaré dans la config
@@ -147,14 +147,8 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     # On merge avec les nouveaux emails
     personne_emails = personne_emails.merge(emails_domaines, on='code_domaine', how='inner', validate='m:1')
 
-    ## AJOUT DES ID PERSONNES
-    # On récupère les personnes existantes dans Sigale
-    personnes = pd.read_sql_query(SQL_MDPS_SIGALE, sigale_engine)
-    # On ajoute les ids dans les emails
-    personne_emails = personne_emails.merge(personnes, on='registre_national_numero', how='inner', validate='m:1')
-
     ## NETTOYAGE
-    personne_emails.drop(columns=['code_domaine', 'registre_national_numero', 'champ_proeco'], inplace=True)
+    personne_emails.drop(columns=['code_domaine', 'champ_proeco'], inplace=True)
 
     ### RECOUPEMENT AVEC DONNEES SIGALE
     emails_sigale = pd.read_sql_query(SQL_EMAILS_SIGALE, sigale_engine)
@@ -207,5 +201,48 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     return None
 
 
+def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+
+    # On ne conserve que les champs définis dans la config
+    champs_utilises = [field for field in config.PHONE_FIELDS]
+    champs_utilises.append('personne_id')
+    phones = phones[champs_utilises]
+    # Avec melt, on répartit nos colonnes telephones dans des nouvelles lignes
+    # On passe d'une structure personne_id, teldomi, telresi, gsm, telbureau
+    # à personne_id, champ_proeco(teldomi, telresi, gsm ou telbureau), valeur
+    phones = phones.melt(id_vars=['personne_id'], value_vars=champs_utilises,
+                                           var_name='champ_proeco', value_name='valeur')
+
+    # On ajoute les champs tels que définis dans la config
+    phones['code_domaine'] = phones.apply(
+        lambda row: config.PHONE_FIELDS.get(row['champ_proeco']).get('code_domaine'), axis=1)
+    phones['code_type'] = phones.apply(
+        lambda row: config.PHONE_FIELDS.get(row['champ_proeco']).get('code_type'), axis=1)
+    phones['est_individuel'] = phones.apply(
+        lambda row: config.PHONE_FIELDS.get(row['champ_proeco']).get('est_individuel'), axis=1)
+    phones['est_principal'] = phones.apply(
+        lambda row: config.PHONE_FIELDS.get(row['champ_proeco']).get('est_principal'), axis=1)
+
+    ## AJOUT DES ID DOMAINES
+    # On récupère les domaines phones de Sigale
+    phones_domaines = pd.read_sql_query(SQL_PARAMETER_SIGALE, sigale_engine,
+                                        params={'type_parameter': 'telephone_domaines'})
+    phones_domaines.rename(columns={'code': 'code_domaine', 'id': 'telephone_domaine_id'}, inplace=True)
+    # On merge avec les nouveaux emails
+    phones = phones.merge(phones_domaines, on='code_domaine', how='inner', validate='m:1')
+
+    ## AJOUT DES ID TYPES
+    # On récupère les domaines phones de Sigale
+    phones_types = pd.read_sql_query(SQL_PARAMETER_SIGALE, sigale_engine,
+                                        params={'type_parameter': 'telephone_types'})
+    phones_types.rename(columns={'code': 'code_type', 'id': 'telephone_type_id'}, inplace=True)
+    # On merge avec les nouveaux emails
+    phones = phones.merge(phones_types, on='code_type', how='inner', validate='m:1')
+
+    ## NETTOYAGE
+    phones.drop(columns=['code_domaine', 'code_type', 'champ_proeco'], inplace=True)
+    phones['valeur'] = phones['valeur'].apply(lambda x: x.replace(' ', '').replace('.', '').replace('/', ''))
+
+    print(phones)
 
 

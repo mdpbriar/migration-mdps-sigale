@@ -1,6 +1,7 @@
 # arguments de connexion à la DB Firebird
 from datetime import datetime
 
+# Options de connection à Firebird
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
 
 # Champs et valeurs par défaut dans la table personnes de Sigale
@@ -14,18 +15,19 @@ SIGALE_METADATA_FIELDS:dict = {
     'optimistic_lock_version': 1
 }
 
+# Valeurs par défaut des champs à la création
 SIGALE_PERSONNES_DEFAULT_FIELDS:dict = {
     'est_collaborateur_rh': False,
     'est_confidentielle': False,
     'est_membre_personnel': True,
 }
 
+# correspondance des champs Proeco -> Sigale
 MAPPING_PROECO_SIGALE:dict = {
-    'matric': 'matric_etud',
-    'nom': 'nom',
-    'prenom': 'prenom',
+    'matric': 'matric_mdp',
 }
 
+# Mapping des états civils entre Proeco et Sigale
 MAPPING_ETATS_CIVILS:dict = {
     'L': 'cohabitant_legal',
     'C': 'celibataire',
@@ -39,3 +41,22 @@ MAPPING_ETATS_CIVILS:dict = {
     'Z': 'decede',
     'R': 'remarie',
 }
+
+# Liste des champs à mettre à jour dans Sigale pour les mdps existant
+SIGALE_UPDATE_FIELDS:list = [
+    'nom',
+    'prenom',
+    'lieu_naissance_hors_belgique',
+    'sexe_id',
+    'city_id_naissance',
+    'pays_id_nationalite',
+    'pays_id_naissance_pays',
+    'etat_civil_id',
+    'matric_mdp',
+    'updated_by',
+    'updated_on',
+    'updated_by_display',
+]
+
+# Est-ce qu'un index unique existe en DB pour registre_national_numero ? L'ajout d'un index unique permet une exécution plus rapide
+UNIQUE_INDEX_ON_REG_NATIONAL:bool = False

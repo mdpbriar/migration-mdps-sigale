@@ -19,7 +19,36 @@ class WriteMethods:
         self.update_columns = update_columns
         self.sql_dialect = sql_dialect
 
-    def upsert(self, table, conn, keys, data_iter):
+
+    def update_existing(self, table, conn, keys, data_iter):
+        """
+        Mise à jour des lignes existantes, ne tente pas d'insérer des données non existantes
+        Les paramètres sont automatiquement passés par pandas
+
+        :return:
+        """
+        # data = [dict(zip(keys, row)) for row in data_iter]
+        data = []
+        for row in data_iter:
+            # On change le nom des colonnes d'index pour éviter CompileError avec bindparam de sqlalchemy
+            single_row = dict(zip(keys, row))
+            for column in self.index_columns:
+                single_row[f"{column}_index"] = single_row.pop(column)
+
+            data.append(single_row)
+
+        update_cols = {}
+        for column in self.update_columns:
+            update_cols[column] = bindparam(column)
+
+        stmt = update(table.table).values(update_cols)
+        for column in self.index_columns:
+            stmt = stmt.where(table.table.c[column] == bindparam(f"{column}_index"))
+
+        result = conn.execute(stmt, data)
+        return result.rowcount
+
+    def update_on_conflict(self, table, conn, keys, data_iter):
         """
         Tente d'insérer les rows, si existe ( sur base de index_columns ), alors met à jour les colonnes présentes dans
         update_columns

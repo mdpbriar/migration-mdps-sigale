@@ -1,4 +1,3 @@
-# arguments de connexion à la DB Firebird
 from datetime import datetime
 from typing import Dict, Literal
 

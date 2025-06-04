@@ -17,3 +17,5 @@ wheels/
 
 *.csv
 exports
+
+config.py

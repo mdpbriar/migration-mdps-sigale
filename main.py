@@ -10,7 +10,7 @@ import pandas as pd
 import sys
 
 from src.db.sigale_connector import SigaleConnector
-from src.migrations import migrate_emails, migrate_personnes, migrate_phones
+from src.migrations import migrate_emails, migrate_personnes, migrate_phones, migrate_adresses
 
 
 def test():
@@ -103,6 +103,8 @@ def main():
     attributs_phones = ['personne_id', 'teldomi', 'telresi', 'gsm', 'telbureau']
     migrate_phones(enseignants_proeco[attributs_phones], sigale_engine, logger, export, dry_run, update)
 
+    attributs_adresses = ['personne_id','ruedomi','paysdomi','cpostdomi','commdomi','locadomi','zonedomi','rueresi','paysresi','cpostresi','commresi','locaresi','zoneresi']
+    migrate_adresses(enseignants_proeco[attributs_adresses], sigale_engine, logger, export, dry_run, update)
     return None
 
 

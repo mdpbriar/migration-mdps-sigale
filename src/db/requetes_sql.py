@@ -13,19 +13,19 @@ paynaiss,
 lieunaiss,
 etatcivil,
 --pour l'adresse
-ruedomi,
-paysdomi,
-cpostdomi,
-commdomi,
-locadomi,
-zonedomi,
+TRIM(ruedomi) as ruedomi,
+TRIM(paysdomi) as paysdomi,
+TRIM(cpostdomi) as cpostdomi,
+TRIM(commdomi) as commdomi,
+TRIM(locadomi) as locadomi,
+TRIM(zonedomi) as zonedomi,
 teldomi,
-rueresi,
-paysresi,
-cpostresi,
-commresi,
-locaresi,
-zoneresi,
+TRIM(rueresi) as rueresi,
+TRIM(paysresi) as paysresi,
+TRIM(cpostresi) as cpostresi,
+TRIM(commresi) as commresi,
+TRIM(locaresi) as locaresi,
+TRIM(zoneresi) as zoneresi,
 telresi,
 gsm,
 email,
@@ -77,3 +77,11 @@ from personnes.personne_telephones t
     inner join personnes.personnes p on p.id = t.personne_id
 where p.est_membre_personnel = true
 """)
+
+SQL_ADRESSES_SIGALE = text(f"""
+select a.id as adresse_id, a.personne_id, a.adresse_type_id, a.created_by
+from personnes.personne_adresses a
+    inner join personnes.personnes p on p.id = a.personne_id
+where p.est_membre_personnel = true
+""")
+

@@ -1,11 +1,13 @@
 import os.path
 from logging import Logger
 
+import numpy as np
 import pandas as pd
 from unidecode import unidecode
 
 import config
-from src.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE
+from src.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE, \
+    SQL_ADRESSES_SIGALE
 from src.db.sql_write_methods import WriteMethods
 
 
@@ -255,7 +257,6 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     phones.dropna(subset=['numero'], inplace=True)
 
     ### RECOUPEMENT AVEC DONNEES SIGALE
-
     phones_sigale = pd.read_sql_query(SQL_PHONES_SIGALE, sigale_engine)
 
     # Si config pour ne remplacer que les created_by migration
@@ -318,3 +319,134 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 
 
 
+def split_column_name(col_name:str):
+    return col_name.replace('domi', '_domi').replace('resi', '_resi')
+
+def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+
+    adresses.columns = [split_column_name(col) for col in adresses.columns]
+    # On sépare les champs proeco _resi et _domi en lignes différentes
+    adresses = pd.wide_to_long(
+        adresses.reset_index(),
+        stubnames=['rue', 'comm', 'pays', 'cpost', 'loca', 'zone'],
+        i='personne_id',
+        j='type',
+        sep='_',
+        suffix='(resi|domi)'
+    ).reset_index()
+
+    # Si resi ou domi n'est pas dans les champs à importer en config, on supprime
+    adresses.drop(adresses[adresses['type'].apply(lambda x: False if config.ADRESSES_FIELDS.get(x) else True)].index, inplace=True )
+
+    # On supprime également les adresses vides
+    adresses.replace(r'^\s*$', np.nan,  regex=True, inplace=True)
+    adresses.dropna(subset=['rue', 'comm', 'cpost'], inplace=True, how='all')
+
+    # On remplace les types resi ou domi par les types Sigale définis dans la config
+    adresses['code_type'] = adresses.apply(
+        lambda row: config.ADRESSES_FIELDS.get(row['type']).get('code_type'), axis=1)
+    # On ajoute la valeur est_principale tel que défini dans la config
+    adresses['est_principale'] = adresses.apply(
+        lambda row: config.ADRESSES_FIELDS.get(row['type']).get('est_principale'), axis=1)
+
+    ## AJOUT DES ID TYPES
+    # On récupère les types d'adresses de Sigale
+    adresses_types = pd.read_sql_query(SQL_PARAMETER_SIGALE, sigale_engine,
+                                     params={'type_parameter': 'adresse_types'})
+    adresses_types.rename(columns={'code': 'code_type', 'id': 'adresse_type_id'}, inplace=True)
+    # On merge avec les adresses
+    adresses = adresses.merge(adresses_types, on='code_type', how='inner', validate='m:1')
+
+    ## AJOUT DES COUNTRY ID
+    # On reformate les codes pays dans notre liste d'adresses, majuscules, suppression d'accents
+    adresses['pays'] = adresses['pays'].apply(str.upper).apply(unidecode).apply(str.strip)
+    # On récupère les nationalités de Sigale dans une table ['pays_id_nationalite', 'code']
+    pays_sigale = pd.read_sql_query("select id as country_id, code as code_pays from core.countries",
+                                    sigale_engine)
+    # Pour les adresses n'ayant pas de pays, on met BE par défaut
+    adresses.fillna({'pays':'BE'},  inplace=True)
+
+    # On merge en inner join, country_id étant un champ obligatoire dans Sigale
+    adresses = adresses.merge(pays_sigale, left_on='pays', right_on='code_pays', how='inner',
+                                                  validate='m:1').drop(columns='code_pays')
+
+    ### AJOUT DES CITY_ID
+    # On récupère les villes de Sigale en ajoutant le code pays BE
+    villes_sigale = pd.read_sql_query(
+        "select id as city_id, name as city_name from core.cities order by postal_code asc", sigale_engine)
+    villes_sigale['code_pays'] = 'BE'
+    # On reformate les noms de villes pour s'assurer du match
+    villes_sigale['city_name'] = villes_sigale['city_name'].apply(str.upper).apply(unidecode).apply(str.strip)
+    adresses['comm'] = adresses['comm'].apply(str.upper).apply(unidecode).apply(str.strip)
+
+    # On supprime les doublons, (plusieurs fois la même ville avec codes postaux différents)
+    # keep first, pour garder le code postal le plus petit (on conserve 4000 au lieu de 4020)
+    villes_sigale.drop_duplicates(subset=['city_name', 'code_pays'], inplace=True, keep='first')
+    adresses = (
+        adresses.merge(villes_sigale, left_on=['comm', 'pays'], right_on=['city_name', 'code_pays'],
+                                 how='left', validate='m:1')
+        .drop(columns=['city_name', 'code_pays']))
+
+    ### NETTOYAGE ET RENOMMAGE DES COLONNES POUR CORRESPONDANCE SIGALE
+    # On supprime les colonnes inutiles
+    adresses.drop(columns=['index', 'type', 'code_type', 'loca', 'zone', 'pays'], inplace=True)
+    # On renomme pour correspondre aux champs Sigale
+    adresses.rename(columns={'rue': 'street', 'cpost': 'postal_code', 'comm': 'city_name'}, inplace=True)
+    adresses['city_name'] = adresses['city_name'].apply(str.title)
+
+    ### RECOUPEMENT AVEC DONNEES SIGALE
+    adresses_sigale = pd.read_sql_query(SQL_ADRESSES_SIGALE, sigale_engine)
+
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        # On écarte les lignes non créées par la migration
+        adresses_sigale.drop(
+            adresses_sigale[adresses_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    adresses_sigale.drop(columns=['created_by'], inplace=True)
+
+    # On merge pour voir quels adresses sont déjà dans Sigale
+    adresses = adresses.merge(adresses_sigale, on=['personne_id', 'adresse_type_id'], how='left',
+                          indicator=True, validate='1:1', suffixes=['_new', '_old'])
+    # Les nouvelles adresses sont celles n'existant que dans Proeco
+    nouvelles_adresses = adresses[adresses['_merge'] == 'left_only'].drop(columns=['_merge', 'adresse_id'])
+    # Les emails à mettre à jour sont ceux existant déjà dans Sigale
+    adresses_existantes = adresses[adresses['_merge'] == 'both'].drop(columns=['_merge'])
+
+    # On exporte si option
+    if export:
+        nouvelles_adresses.to_csv(os.path.join(config.EXPORT_PATH, 'adresses_nouvelles.csv'), index=False)
+        adresses_existantes.to_csv(os.path.join(config.EXPORT_PATH, 'adresses_existantes.csv'), index=False)
+
+    # On ajoute les métadonnées
+    for key, value in config.SIGALE_METADATA_FIELDS.items():
+        nouvelles_adresses[key] = value
+        adresses_existantes[key] = value
+
+    # Si dry_run, on s'arrête avant les modifications en DB
+    if dry_run:
+        logger.log(
+            f"Dry run, pas de modification en DB, {len(nouvelles_adresses)} adresses à insérer, {len(adresses_existantes)} adresses à mettre à jour")
+        return None
+
+    # On insère les nouvelles adresses dans Sigale
+    nouvelles_adresses.to_sql('personne_adresses', con=sigale_engine, schema='personnes', index=False,
+                           if_exists='append')
+    logger.log(f"{len(nouvelles_adresses)} nouvelles adresses introduites dans Sigale")
+
+    # Si no-update, on s'arrête
+    if not update:
+        return None
+
+    # On mets à jour les champs des enseignants existants basé sur la config
+    adresses_existantes.rename(columns={'adresse_id': 'id'}).to_sql('personne_adresses', con=sigale_engine,
+                                                                   schema='personnes', index=False,
+                                                                   if_exists='append',
+                                                                   method=WriteMethods(
+                                                                       index_columns=['id'],
+                                                                       update_columns=config.SIGALE_ADRESSES_UPDATE_FIELDS).update_on_conflict)
+    logger.log(f"{len(adresses_existantes)} adresses mises à jour dans Sigale")
+
+    return None

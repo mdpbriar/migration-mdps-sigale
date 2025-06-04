@@ -64,3 +64,6 @@ Voici sommairement les étapes effectuées par le script de migration :
 7. Ajoute les nouvelles données
 8. Met à jour les données existantes ( sauf si `--no-update` utilisé)
 9. Répète les étapes 3 à 9 pour les emails, téléphones et adresses
+
+Par défaut, le script ne modifie que les emails, téléphones et adresses créés par lui-même.
+( ou par un script de migration, il se réfère au created_by), ce comportement peut être changé

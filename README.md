@@ -60,7 +60,7 @@ Voici sommairement les étapes effectuées par le script de migration :
 3. Il recoupe avec les données Sigale pour ajouter les clés étrangères nécessaires (city_id_naissance, sexe_id, etat_civil_id, etc.)
 4. Il recoupe avec la liste des mdps déjà présents dans Sigale, pour séparer les mdps existants, et les nouveaux.
 5. Il exporte les données dans un csv si `--export` utilisé
-6. S'arrête si `--dry-run` lancé
+6. S'arrête si `--dry-run` utilisé
 7. Ajoute les nouvelles données
 8. Met à jour les données existantes ( sauf si `--no-update` utilisé)
 9. Répète les étapes 3 à 9 pour les emails, téléphones et adresses

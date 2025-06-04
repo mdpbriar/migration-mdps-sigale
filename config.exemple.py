@@ -108,7 +108,7 @@ SIGALE_ADRESSES_UPDATE_FIELDS:list = [
 # Options pour les champs Email
 EMAILS_FIELDS:Dict[Literal['email', 'email2'],Dict] = {
     'email':{
-        'code_domaine': 'prive',
+        'code_domaine': 'prive', # voir code = email_domaines dans core.parameter_types
         'est_individuel': True,
         'est_principal': False,
     },
@@ -122,8 +122,8 @@ EMAILS_FIELDS:Dict[Literal['email', 'email2'],Dict] = {
 # Options pour les champs téléphones
 PHONE_FIELDS: Dict[Literal['teldomi', 'gsm', 'telresi', 'telbureau'], Dict] = {
     'teldomi': {
-        'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel
-        'code_type': 'fixe', # fixe ou mobile
+        'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel, voir code = telephone_domaines dans core.parameter_types
+        'code_type': 'fixe', # fixe ou mobile, voir code = telephone_types dans core.parameter_types
         'est_individuel': True,
         'est_principal': False,
     },
@@ -162,3 +162,6 @@ ADRESSES_FIELDS: Dict[Literal['domi', 'resi'], Dict] = {
 
 # Chemin de fichier pour les exports
 EXPORT_PATH:str = 'exports'
+
+# fichier de logs
+LOGS_FILE: str = 'logs/logs_migration.log'

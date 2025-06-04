@@ -108,13 +108,13 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
 
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
-        logger.log(
+        logger.info(
             f"Dry run, pas de modification en DB, {len(nouveaux_enseignants)} mdps à insérer, {len(enseignants_existants)} mdps à mettre à jour")
         return None
 
     # On insère les nouveaux enseignants dans Sigale
     nouveaux_enseignants.to_sql('personnes', con=sigale_engine, schema='personnes', index=False, if_exists='append')
-    logger.log(f"{len(nouveaux_enseignants)} nouveaux mdps introduits dans Sigale")
+    logger.info(f"{len(nouveaux_enseignants)} nouveaux mdps introduits dans Sigale")
 
     # Si no-update, on s'arrête
     if not update:
@@ -124,7 +124,7 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
     # On mets à jour les champs des enseignants existants basé sur la config
     enseignants_existants.rename(columns={'personne_id': 'id'}).to_sql('personnes', con=sigale_engine, schema='personnes', index=False, if_exists='append',
                                  method=WriteMethods(index_columns=['id'], update_columns=config.SIGALE_UPDATE_FIELDS).update_on_conflict)
-    logger.log(f"{len(enseignants_existants)} mdps mis à jour dans Sigale")
+    logger.info(f"{len(enseignants_existants)} mdps mis à jour dans Sigale")
 
     return None
 
@@ -185,13 +185,13 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
 
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
-        logger.log(
+        logger.info(
             f"Dry run, pas de modification en DB, {len(nouveaux_emails)} emails à insérer, {len(emails_existants)} emails à mettre à jour")
         return None
 
     # On insère les nouveaux enseignants dans Sigale
     nouveaux_emails.to_sql('personne_emails', con=sigale_engine, schema='personnes', index=False, if_exists='append')
-    logger.log(f"{len(nouveaux_emails)} nouveaux emails introduits dans Sigale")
+    logger.info(f"{len(nouveaux_emails)} nouveaux emails introduits dans Sigale")
 
     # Si no-update, on s'arrête
     if not update:
@@ -206,7 +206,7 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
                                                                        if_exists='append',
                                                                        method=WriteMethods(index_columns=['id'],
                                                                                            update_columns=config.SIGALE_EMAIL_UPDATE_FIELDS).update_on_conflict)
-    logger.log(f"{len(emails_existants)} emails mis à jour dans Sigale")
+    logger.info(f"{len(emails_existants)} emails mis à jour dans Sigale")
 
     return None
 
@@ -290,14 +290,14 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
-        logger.log(
+        logger.info(
             f"Dry run, pas de modification en DB, {len(nouveaux_phones)} téléphones à insérer, {len(phones_existants)} emails à mettre à jour")
         return None
 
     # On insère les nouveaux téléphones dans Sigale
     nouveaux_phones.to_sql('personne_telephones', con=sigale_engine, schema='personnes', index=False,
                            if_exists='append')
-    logger.log(f"{len(nouveaux_phones)} nouveaux téléphones introduits dans Sigale")
+    logger.info(f"{len(nouveaux_phones)} nouveaux téléphones introduits dans Sigale")
 
     # Si no-update, on s'arrête
     if not update:
@@ -313,7 +313,7 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
                                                                method=WriteMethods(
                                                                    index_columns=['id'],
                                                                    update_columns=config.SIGALE_PHONE_UPDATE_FIELDS).update_on_conflict)
-    logger.log(f"{len(phones_existants)} téléphones mis à jour dans Sigale")
+    logger.info(f"{len(phones_existants)} téléphones mis à jour dans Sigale")
 
     return None
 
@@ -427,14 +427,14 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
 
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
-        logger.log(
+        logger.info(
             f"Dry run, pas de modification en DB, {len(nouvelles_adresses)} adresses à insérer, {len(adresses_existantes)} adresses à mettre à jour")
         return None
 
     # On insère les nouvelles adresses dans Sigale
     nouvelles_adresses.to_sql('personne_adresses', con=sigale_engine, schema='personnes', index=False,
                            if_exists='append')
-    logger.log(f"{len(nouvelles_adresses)} nouvelles adresses introduites dans Sigale")
+    logger.info(f"{len(nouvelles_adresses)} nouvelles adresses introduites dans Sigale")
 
     # Si no-update, on s'arrête
     if not update:
@@ -447,6 +447,6 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
                                                                    method=WriteMethods(
                                                                        index_columns=['id'],
                                                                        update_columns=config.SIGALE_ADRESSES_UPDATE_FIELDS).update_on_conflict)
-    logger.log(f"{len(adresses_existantes)} adresses mises à jour dans Sigale")
+    logger.info(f"{len(adresses_existantes)} adresses mises à jour dans Sigale")
 
     return None

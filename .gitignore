@@ -17,5 +17,6 @@ wheels/
 
 *.csv
 exports
+logs
 
 config.py

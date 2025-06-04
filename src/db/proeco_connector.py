@@ -41,14 +41,15 @@ class ProecoConnector:
             connect_args=FIREBIRD_CONNECT_ARGS,
         )
 
-    def test_connection(self):
+    def test_connection(self, logger = None):
         """
         Pour tester la connexion à Proeco
         """
         try:
             conn = self.create_engine().connect()
             conn.close()
-            print("Connecté avec succès !")
-            print(f"La connection à la base de donnée {self.database_path} sur {self.db_url} est OK")
+            if logger:
+                logger.debug(f"La connection à la base de donnée {self.database_path} sur {self.db_url} est OK")
         except Exception as e:
-            print(e)
+            if logger:
+                logger.error(e)

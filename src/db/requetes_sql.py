@@ -1,5 +1,7 @@
 from sqlalchemy import text
 
+import config
+
 SQL_MDPS_PROECO = text(f"""
 select
 matric,
@@ -63,8 +65,15 @@ where pt.code = :type_parameter
 """)
 
 SQL_EMAILS_SIGALE = text("""
-select e.id as email_id, e.personne_id, e.valeur, e.email_domaine_id
+select e.id as email_id, e.personne_id, e.valeur, e.email_domaine_id, e.created_by
 from personnes.personne_emails e
     inner join personnes.personnes p on p.id = e.personne_id
+where p.est_membre_personnel = true
+""")
+
+SQL_PHONES_SIGALE = text(f"""
+select t.id as telephone_id, t.personne_id, t.numero, t.telephone_domaine_id, t.telephone_type_id, t.created_by
+from personnes.personne_telephones t
+    inner join personnes.personnes p on p.id = t.personne_id
 where p.est_membre_personnel = true
 """)

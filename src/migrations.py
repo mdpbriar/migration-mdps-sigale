@@ -5,7 +5,7 @@ import pandas as pd
 from unidecode import unidecode
 
 import config
-from src.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE
+from src.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE
 from src.db.sql_write_methods import WriteMethods
 
 
@@ -152,6 +152,14 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
 
     ### RECOUPEMENT AVEC DONNEES SIGALE
     emails_sigale = pd.read_sql_query(SQL_EMAILS_SIGALE, sigale_engine)
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        emails_sigale.drop(
+            emails_sigale[emails_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    emails_sigale.drop(columns=['created_by'], inplace=True)
     # On merge pour voir quels enseignants sont déjà dans Sigale
     personne_emails = personne_emails.merge(emails_sigale, on=['personne_id', 'email_domaine_id'], how='left',
                                                   indicator=True, validate='1:1', suffixes=['_new', '_old'])
@@ -181,7 +189,7 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
 
     # On insère les nouveaux enseignants dans Sigale
     nouveaux_emails.to_sql('personne_emails', con=sigale_engine, schema='personnes', index=False, if_exists='append')
-    logger.log(f"{len(nouveaux_emails)} nouveaux mdps introduits dans Sigale")
+    logger.log(f"{len(nouveaux_emails)} nouveaux emails introduits dans Sigale")
 
     # Si no-update, on s'arrête
     if not update:
@@ -194,9 +202,9 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     emails_existants.rename(columns={'email_id': 'id'}).to_sql('personne_emails', con=sigale_engine,
                                                                        schema='personnes', index=False,
                                                                        if_exists='append',
-                                                                       method=WriteMethods(index_columns=['id', 'email_domaine_id'],
-                                                                                           update_columns=config.SIGALE_EMAIL_UPDATE_FIELDS).update_existing)
-    logger.log(f"{len(emails_existants)} mdps mis à jour dans Sigale")
+                                                                       method=WriteMethods(index_columns=['id'],
+                                                                                           update_columns=config.SIGALE_EMAIL_UPDATE_FIELDS).update_on_conflict)
+    logger.log(f"{len(emails_existants)} emails mis à jour dans Sigale")
 
     return None
 
@@ -209,9 +217,9 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     phones = phones[champs_utilises]
     # Avec melt, on répartit nos colonnes telephones dans des nouvelles lignes
     # On passe d'une structure personne_id, teldomi, telresi, gsm, telbureau
-    # à personne_id, champ_proeco(teldomi, telresi, gsm ou telbureau), valeur
+    # à personne_id, champ_proeco(teldomi, telresi, gsm ou telbureau), numero
     phones = phones.melt(id_vars=['personne_id'], value_vars=champs_utilises,
-                                           var_name='champ_proeco', value_name='valeur')
+                                           var_name='champ_proeco', value_name='numero')
 
     # On ajoute les champs tels que définis dans la config
     phones['code_domaine'] = phones.apply(
@@ -241,8 +249,72 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 
     ## NETTOYAGE
     phones.drop(columns=['code_domaine', 'code_type', 'champ_proeco'], inplace=True)
-    phones['valeur'] = phones['valeur'].apply(lambda x: x.replace(' ', '').replace('.', '').replace('/', ''))
+    phones['numero'] = phones['numero'].apply(lambda x: x.replace(' ', '').replace('.', '').replace('/', ''))
+    # On supprime là où le numéro de téléphone est vide
+    phones.drop(phones[phones['numero'] == ''].index, inplace=True)
+    phones.dropna(subset=['numero'], inplace=True)
 
-    print(phones)
+    ### RECOUPEMENT AVEC DONNEES SIGALE
+
+    phones_sigale = pd.read_sql_query(SQL_PHONES_SIGALE, sigale_engine)
+
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        # On écarte les lignes non créées par la migration
+        phones_sigale.drop(phones_sigale[phones_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index, inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    phones_sigale.drop(columns=['created_by'], inplace=True)
+
+    # On merge pour voir quels numéros sont déjà dans Sigale
+    phones = phones.merge(phones_sigale, on=['personne_id', 'telephone_domaine_id', 'telephone_type_id'], how='left',
+                                            indicator=True, validate='1:1', suffixes=['_new', '_old'])
+    # Les nouveaux téléphones sont ceux n'existant que dans Proeco
+    nouveaux_phones = phones[phones['_merge'] == 'left_only'].drop(columns=['_merge', 'telephone_id'])
+    # Les emails à mettre à jour sont ceux existant déjà dans Sigale
+    phones_existants = phones[phones['_merge'] == 'both'].drop(columns=['_merge'])
+
+    nouveaux_phones.drop(columns=['numero_old'], inplace=True)
+    nouveaux_phones.rename(columns={'numero_new': 'numero'}, inplace=True)
+
+    # On exporte si option
+    if export:
+        nouveaux_phones.to_csv(os.path.join(config.EXPORT_PATH, 'telephones_nouveaux.csv'), index=False)
+        phones_existants.to_csv(os.path.join(config.EXPORT_PATH, 'telephones_existants.csv'), index=False)
+
+    # On ajoute les métadonnées
+    for key, value in config.SIGALE_METADATA_FIELDS.items():
+        nouveaux_phones[key] = value
+        phones_existants[key] = value
+
+    # Si dry_run, on s'arrête avant les modifications en DB
+    if dry_run:
+        logger.log(
+            f"Dry run, pas de modification en DB, {len(nouveaux_phones)} téléphones à insérer, {len(phones_existants)} emails à mettre à jour")
+        return None
+
+    # On insère les nouveaux téléphones dans Sigale
+    nouveaux_phones.to_sql('personne_telephones', con=sigale_engine, schema='personnes', index=False,
+                           if_exists='append')
+    logger.log(f"{len(nouveaux_phones)} nouveaux téléphones introduits dans Sigale")
+
+    # Si no-update, on s'arrête
+    if not update:
+        return None
+
+    phones_existants.drop(columns=['numero_old'], inplace=True)
+    phones_existants.rename(columns={'numero_new': 'numero'}, inplace=True)
+
+    # On mets à jour les champs des enseignants existants basé sur la config
+    phones_existants.rename(columns={'telephone_id': 'id'}).to_sql('personne_telephones', con=sigale_engine,
+                                                               schema='personnes', index=False,
+                                                               if_exists='append',
+                                                               method=WriteMethods(
+                                                                   index_columns=['id'],
+                                                                   update_columns=config.SIGALE_PHONE_UPDATE_FIELDS).update_on_conflict)
+    logger.log(f"{len(phones_existants)} téléphones mis à jour dans Sigale")
+
+    return None
+
 
 

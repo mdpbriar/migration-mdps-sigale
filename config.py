@@ -6,6 +6,8 @@ from typing import Dict
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
 
 # Champs et valeurs par défaut dans la table personnes de Sigale
+# Le numéro dans created_by sera aussi utilisé pour filtrer les lignes à remplacer, le
+# script de migration ne modifiera que les numéros, téléphones et adresses créées par lui-même
 SIGALE_METADATA_FIELDS:dict = {
     'created_by': 1,
     'created_by_display': 'TeamMigration',
@@ -15,6 +17,9 @@ SIGALE_METADATA_FIELDS:dict = {
     'updated_on': datetime.now(),
     'optimistic_lock_version': 1
 }
+
+# Si à True, s'assure de ne modifier que les lignes créées par la migration (pour adresses, téléphones et emails)
+UPDATE_ONLY_CREATED_BY_MIGRATION:bool = True
 
 # Valeurs par défaut des champs à la création
 SIGALE_PERSONNES_DEFAULT_FIELDS:dict = {
@@ -67,6 +72,16 @@ SIGALE_EMAIL_UPDATE_FIELDS:list = [
     'updated_on',
     'updated_by_display',
 ]
+
+SIGALE_PHONE_UPDATE_FIELDS:list = [
+    'est_individuel',
+    'est_principal',
+    'numero',
+    'updated_by',
+    'updated_on',
+    'updated_by_display',
+]
+
 
 
 EMAILS_FIELDS:Dict[str,Dict] = {

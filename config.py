@@ -49,6 +49,11 @@ MAPPING_ETATS_CIVILS:dict = {
     'R': 'remarie',
 }
 
+## Update fields
+# la liste des champs qui sont mis à jours à chaque synchro,
+# vous pouvez les commenter si vous ne souhaitez pas effectuer une mise à jour de tel ou tel champ.
+# Ne pas ajouter de champ !
+
 # Liste des champs à mettre à jour dans Sigale pour les mdps existant
 SIGALE_UPDATE_FIELDS:list = [
     'nom',
@@ -65,6 +70,7 @@ SIGALE_UPDATE_FIELDS:list = [
     'updated_by_display',
 ]
 
+# Liste des champs à mettre à jour dans Sigale pour les emails
 SIGALE_EMAIL_UPDATE_FIELDS:list = [
     'est_individuel',
     'est_principal',
@@ -74,6 +80,7 @@ SIGALE_EMAIL_UPDATE_FIELDS:list = [
     'updated_by_display',
 ]
 
+# Liste des champs à mettre à jour dans Sigale pour les téléphones
 SIGALE_PHONE_UPDATE_FIELDS:list = [
     'est_individuel',
     'est_principal',
@@ -83,6 +90,7 @@ SIGALE_PHONE_UPDATE_FIELDS:list = [
     'updated_by_display',
 ]
 
+# Liste des champs à mettre à jour dans Sigale pour les adresses
 SIGALE_ADRESSES_UPDATE_FIELDS:list = [
     'est_principale',
     'street',
@@ -95,9 +103,11 @@ SIGALE_ADRESSES_UPDATE_FIELDS:list = [
     'updated_by_display',
 ]
 
+# Ces options permettent de définir quels champs de Proeco utiliser, et comment les importer
+# Vous pouvez simplement supprimer ou commenter des options si vous ne souhaitez pas importer un champ
 
-
-EMAILS_FIELDS:Dict[str,Dict] = {
+# Options pour les champs Email
+EMAILS_FIELDS:Dict[Literal['email', 'email2'],Dict] = {
     'email':{
         'code_domaine': 'prive',
         'est_individuel': True,
@@ -110,7 +120,8 @@ EMAILS_FIELDS:Dict[str,Dict] = {
     }
 }
 
-PHONE_FIELDS: Dict[str, Dict] = {
+# Options pour les champs téléphones
+PHONE_FIELDS: Dict[Literal['teldomi', 'gsm', 'telresi', 'telbureau'], Dict] = {
     'teldomi': {
         'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel
         'code_type': 'fixe', # fixe ou mobile
@@ -123,8 +134,21 @@ PHONE_FIELDS: Dict[str, Dict] = {
         'est_individuel': True,
         'est_principal': False,
     },
+    # 'telresi': {
+    #     'code_domaine': 'professionnel',
+    #     'code_type': 'fixe',
+    #     'est_individuel': True,
+    #     'est_principal': False,
+    # },
+    # 'telbureau': {
+    #     'code_domaine': 'etablissement',
+    #     'code_type': 'fixe',
+    #     'est_individuel': True,
+    #     'est_principal': False,
+    # },
 }
 
+# Options pour les champs adresses
 ADRESSES_FIELDS: Dict[Literal['domi', 'resi'], Dict] = {
     # 2 clés possibles, domi ou resi, pour adresses Proeco domicile ou residence
     'domi': {
@@ -137,4 +161,5 @@ ADRESSES_FIELDS: Dict[Literal['domi', 'resi'], Dict] = {
     }
 }
 
+# Chemin de fichier pour les exports
 EXPORT_PATH:str = 'exports'

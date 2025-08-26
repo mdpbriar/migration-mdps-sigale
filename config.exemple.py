@@ -171,4 +171,5 @@ LOGS_FILE: str = 'logs/logs_migration.log'
 # Vous pouvez utiliser n'importe quelle colonne présente dans la liste
 # attributs_personne dans main.py:135
 def get_eid(row: Dict) -> str:
+    # pour l'exemple, ici l'EID est concaténé depuis les champs matric et reserved
     return str(row['matric']) + str(row['reserved'])

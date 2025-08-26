@@ -13,6 +13,10 @@ from src.db.sql_write_methods import WriteMethods
 
 def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
 
+    ### AJOUT DU CHAMP EID
+    enseignants_proeco = enseignants_proeco.assign(
+        eid=enseignants_proeco.apply(lambda row: config.get_eid(row), 1)
+    )
     #### AJOUT DES SEXE_ID ####
     # On récupère les sexes de Sigale dans une table ['sexe_id', 'sexe']
     sexes_sigale = pd.read_sql_query(SQL_PARAMETER_SIGALE, sigale_engine,
@@ -77,9 +81,10 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
 
     ### NETTOYAGE
     # # On supprime les colonnes devenues inutiles
-    enseignants_proeco.drop(columns=['paynaiss', 'lieunaiss'], inplace=True)
+    enseignants_proeco.drop(columns=['paynaiss', 'lieunaiss', 'matriche', 'reserved'], inplace=True)
     # On renomme les champs selon le mapping pour correspondre à Sigale
     enseignants_proeco.rename(columns=config.MAPPING_PROECO_SIGALE, inplace=True)
+
 
     ### RECOUPEMENT AVEC LES DONNEES DE SIGALE
     # on récupère les personnes de Sigale
@@ -164,7 +169,7 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     emails_sigale.drop(columns=['created_by'], inplace=True)
     # On merge pour voir quels enseignants sont déjà dans Sigale
     personne_emails = personne_emails.merge(emails_sigale, on=['personne_id', 'email_domaine_id'], how='left',
-                                                  indicator=True, validate='1:1', suffixes=['_new', '_old'])
+                                                  indicator=True, validate='1:m', suffixes=['_new', '_old'])
     # Les nouveaux emails sont ceux n'existant que dans Proeco
     nouveaux_emails = personne_emails[personne_emails['_merge'] == 'left_only'].drop(columns=['_merge', 'email_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale
@@ -269,7 +274,7 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 
     # On merge pour voir quels numéros sont déjà dans Sigale
     phones = phones.merge(phones_sigale, on=['personne_id', 'telephone_domaine_id', 'telephone_type_id'], how='left',
-                                            indicator=True, validate='1:1', suffixes=['_new', '_old'])
+                                            indicator=True, validate='1:m', suffixes=['_new', '_old'])
     # Les nouveaux téléphones sont ceux n'existant que dans Proeco
     nouveaux_phones = phones[phones['_merge'] == 'left_only'].drop(columns=['_merge', 'telephone_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale
@@ -409,7 +414,7 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
 
     # On merge pour voir quels adresses sont déjà dans Sigale
     adresses = adresses.merge(adresses_sigale, on=['personne_id', 'adresse_type_id'], how='left',
-                          indicator=True, validate='1:1', suffixes=['_new', '_old'])
+                          indicator=True, validate='1:m', suffixes=['_new', '_old'])
     # Les nouvelles adresses sont celles n'existant que dans Proeco
     nouvelles_adresses = adresses[adresses['_merge'] == 'left_only'].drop(columns=['_merge', 'adresse_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale

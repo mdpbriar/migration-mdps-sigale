@@ -132,7 +132,7 @@ def main():
     enseignants_proeco['date_naissance'] = enseignants_proeco['date_naissance'].apply(lambda x: DateUtils.convert_dateproeco_to_date(x))
 
     # On migre les personnes, gestion de l'ajout/mise à jour dans personnes.personnes
-    attributs_personnes = ['matric','nom','prenom','sexe','nation','paynaiss','lieunaiss','etatcivil','registre_national_numero','date_naissance']
+    attributs_personnes = ['matric','nom','prenom','sexe','nation','paynaiss','lieunaiss','etatcivil','registre_national_numero','date_naissance', 'matriche', 'reserved']
     migrate_personnes(enseignants_proeco[attributs_personnes], sigale_engine, logger, export, dry_run, update)
 
     ## AJOUT DES ID PERSONNES

@@ -31,8 +31,9 @@ gsm,
 email,
 email2,
 telbureau,
---matriche,
---reservef,
+matriche,
+reserved,
+reservef,
 regnat1 as registre_national_numero, 
 datnaiss as date_naissance
 from PERSONNE

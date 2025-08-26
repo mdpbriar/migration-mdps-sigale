@@ -57,6 +57,7 @@ MAPPING_ETATS_CIVILS:dict = {
 SIGALE_UPDATE_FIELDS:list = [
     'nom',
     'prenom',
+    'eid',
     'lieu_naissance_hors_belgique',
     'sexe_id',
     'city_id_naissance',
@@ -165,3 +166,9 @@ EXPORT_PATH:str = 'exports'
 
 # fichier de logs
 LOGS_FILE: str = 'logs/logs_migration.log'
+
+# Fonction qui calcule le EID en fonction des champs de Proeco
+# Vous pouvez utiliser n'importe quelle colonne présente dans la liste
+# attributs_personne dans main.py:135
+def get_eid(row: Dict) -> str:
+    return str(row['matric']) + str(row['reserved'])

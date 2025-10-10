@@ -147,6 +147,8 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     personne_emails['est_individuel'] = personne_emails.apply(lambda row: config.EMAILS_FIELDS.get(row['champ_proeco']).get('est_individuel'), axis=1)
     personne_emails['est_principal'] = personne_emails.apply(lambda row: config.EMAILS_FIELDS.get(row['champ_proeco']).get('est_principal'), axis=1)
 
+    personne_emails.dropna(subset=['valeur'], inplace=True)
+
     ## AJOUT DES ID DOMAINES
     # On récupère les domaines emails de Sigale
     emails_domaines = pd.read_sql_query(SQL_PARAMETER_SIGALE, sigale_engine, params={'type_parameter': 'email_domaines'})
@@ -156,20 +158,26 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
 
     ## NETTOYAGE
     personne_emails.drop(columns=['code_domaine', 'champ_proeco'], inplace=True)
+    # On filtre les emails vides
+    # personne_emails = personne_emails[~personne_emails['valeur'].isnull()]
 
     ### RECOUPEMENT AVEC DONNEES SIGALE
     emails_sigale = pd.read_sql_query(SQL_EMAILS_SIGALE, sigale_engine)
-    # Si config pour ne remplacer que les created_by migration
-    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
-        emails_sigale.drop(
-            emails_sigale[emails_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
-            inplace=True)
 
-    # Suppression de la colonne created by, utilisée uniquement pour filtrer
-    emails_sigale.drop(columns=['created_by'], inplace=True)
     # On merge pour voir quels enseignants sont déjà dans Sigale
     personne_emails = personne_emails.merge(emails_sigale, on=['personne_id', 'email_domaine_id'], how='left',
                                                   indicator=True, validate='1:m', suffixes=['_new', '_old'])
+
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        personne_emails.drop(
+            personne_emails[personne_emails['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    personne_emails.drop(columns=['created_by'], inplace=True)
+
+
     # Les nouveaux emails sont ceux n'existant que dans Proeco
     nouveaux_emails = personne_emails[personne_emails['_merge'] == 'left_only'].drop(columns=['_merge', 'email_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale
@@ -264,17 +272,20 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     ### RECOUPEMENT AVEC DONNEES SIGALE
     phones_sigale = pd.read_sql_query(SQL_PHONES_SIGALE, sigale_engine)
 
-    # Si config pour ne remplacer que les created_by migration
-    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
-        # On écarte les lignes non créées par la migration
-        phones_sigale.drop(phones_sigale[phones_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index, inplace=True)
-
-    # Suppression de la colonne created by, utilisée uniquement pour filtrer
-    phones_sigale.drop(columns=['created_by'], inplace=True)
-
     # On merge pour voir quels numéros sont déjà dans Sigale
     phones = phones.merge(phones_sigale, on=['personne_id', 'telephone_domaine_id', 'telephone_type_id'], how='left',
                                             indicator=True, validate='1:m', suffixes=['_new', '_old'])
+
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        # On écarte les lignes non créées par la migration
+        phones.drop(
+            phones[phones['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    phones.drop(columns=['created_by'], inplace=True)
+
     # Les nouveaux téléphones sont ceux n'existant que dans Proeco
     nouveaux_phones = phones[phones['_merge'] == 'left_only'].drop(columns=['_merge', 'telephone_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale
@@ -402,19 +413,20 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
     ### RECOUPEMENT AVEC DONNEES SIGALE
     adresses_sigale = pd.read_sql_query(SQL_ADRESSES_SIGALE, sigale_engine)
 
-    # Si config pour ne remplacer que les created_by migration
-    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
-        # On écarte les lignes non créées par la migration
-        adresses_sigale.drop(
-            adresses_sigale[adresses_sigale['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
-            inplace=True)
-
-    # Suppression de la colonne created by, utilisée uniquement pour filtrer
-    adresses_sigale.drop(columns=['created_by'], inplace=True)
-
     # On merge pour voir quels adresses sont déjà dans Sigale
     adresses = adresses.merge(adresses_sigale, on=['personne_id', 'adresse_type_id'], how='left',
                           indicator=True, validate='1:m', suffixes=['_new', '_old'])
+
+    # Si config pour ne remplacer que les created_by migration
+    if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
+        # On écarte les lignes non créées par la migration
+        adresses.drop(
+            adresses[adresses['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            inplace=True)
+
+    # Suppression de la colonne created by, utilisée uniquement pour filtrer
+    adresses.drop(columns=['created_by'], inplace=True)
+
     # Les nouvelles adresses sont celles n'existant que dans Proeco
     nouvelles_adresses = adresses[adresses['_merge'] == 'left_only'].drop(columns=['_merge', 'adresse_id'])
     # Les emails à mettre à jour sont ceux existant déjà dans Sigale

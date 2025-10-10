@@ -105,7 +105,10 @@ def main():
 
 
     # On récupère le résulat de la SQL dans un dataframe
-    enseignants_proeco = pd.read_sql_query(SQL_MDPS_PROECO, proeco_engine)
+    enseignants_proeco = pd.read_sql_query(SQL_MDPS_PROECO, proeco_engine, dtype={'registre_national_numero': str})
+
+    # On nettoie le numéro de registre national des éventuels espaces inutiles
+    enseignants_proeco['registre_national_numero'] = enseignants_proeco['registre_national_numero'].str.strip()
 
     # Si option pour ne prendre que les contrats en cours
     if contrat_en_cours_uniquement:

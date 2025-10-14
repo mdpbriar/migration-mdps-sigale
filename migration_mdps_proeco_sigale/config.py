@@ -1,12 +1,18 @@
+import re
+import secrets
 from datetime import datetime
 from typing import Dict, Literal
+
+from unidecode import unidecode
 
 # Options de connection à Firebird
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
 
 # Champs et valeurs par défaut dans la table personnes de Sigale
 # Le numéro dans created_by sera aussi utilisé pour filtrer les lignes à remplacer, le
-# script de migration ne modifiera que les numéros, téléphones et adresses créées par lui-même
+# script de migration ne modifiera que les numéros, téléphones et adresses
+# créées par l'utilisateur défini pour les migrations si l'option UPDATE_ONLY_CREATED_BY_MIGRATION est à True
+
 SIGALE_METADATA_FIELDS:dict = {
     'created_by': 1,
     'created_by_display': 'TeamMigration',
@@ -57,7 +63,7 @@ MAPPING_ETATS_CIVILS:dict = {
 SIGALE_UPDATE_FIELDS:list = [
     'nom',
     'prenom',
-    'eid',
+    # 'eid',
     'lieu_naissance_hors_belgique',
     'sexe_id',
     'city_id_naissance',
@@ -109,7 +115,7 @@ SIGALE_ADRESSES_UPDATE_FIELDS:list = [
 # Options pour les champs Email
 EMAILS_FIELDS:Dict[Literal['email', 'email2'],Dict] = {
     'email':{
-        'code_domaine': 'prive', # voir code = email_domaines dans core.parameter_types
+        'code_domaine': 'prive',
         'est_individuel': True,
         'est_principal': False,
     },
@@ -123,8 +129,8 @@ EMAILS_FIELDS:Dict[Literal['email', 'email2'],Dict] = {
 # Options pour les champs téléphones
 PHONE_FIELDS: Dict[Literal['teldomi', 'gsm', 'telresi', 'telbureau'], Dict] = {
     'teldomi': {
-        'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel, voir code = telephone_domaines dans core.parameter_types
-        'code_type': 'fixe', # fixe ou mobile, voir code = telephone_types dans core.parameter_types
+        'code_domaine': 'prive', # institutionnel, etablissement, prive, professionnel
+        'code_type': 'fixe', # fixe ou mobile
         'est_individuel': True,
         'est_principal': False,
     },
@@ -162,14 +168,42 @@ ADRESSES_FIELDS: Dict[Literal['domi', 'resi'], Dict] = {
 }
 
 # Chemin de fichier pour les exports
-EXPORT_PATH:str = 'exports'
+EXPORT_PATH:str = '../exports'
 
 # fichier de logs
-LOGS_FILE: str = 'logs/logs_migration.log'
+LOGS_FILE: str = '../logs/logs_migration.log'
+
+
+
+def clean_name(name:str) -> str:
+    # On convertit en minuscule
+    name = name.lower()
+    # on convertit tous les caractères en ascii sans accent ou diacritiques
+    name = unidecode(name)
+
+    # On retourne en ne gardant que des lettres de a à z
+    return re.sub('[^a-z]+', '', name)
+
+
+def generate_alias(prenom:str, nom:str, limit:int=10) -> str:
+    # Génération de l'alias prenomnom
+    prenom = clean_name(prenom)
+    nom = clean_name(nom)
+
+    return f"{prenom[:limit]}{nom[:limit]}"
+
+
+def generate_hexadecimal(length:int=10) -> str:
+    """Generate secure random hexadecimal string using secrets module"""
+    return secrets.token_hex(length // 2)
+
+def generate_eid(prenom:str, nom:str) -> str:
+    # On combine les deux fonctions, la génération de l'alias et l'hexadécimal
+    return f"{generate_alias(prenom, nom)}_{generate_hexadecimal()}"
+
 
 # Fonction qui calcule le EID en fonction des champs de Proeco
 # Vous pouvez utiliser n'importe quelle colonne présente dans la liste
 # attributs_personne dans main.py:135
 def get_eid(row: Dict) -> str:
-    # pour l'exemple, ici l'EID est concaténé depuis les champs matric et reserved
-    return str(row['matric']) + str(row['reserved'])
+    return generate_eid(str(row['prenom']), str(row['nom']))

@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 from unidecode import unidecode
 
-import config
-from src.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE, \
+from migration_mdps_proeco_sigale import config as default_config
+from migration_mdps_proeco_sigale.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE, \
     SQL_ADRESSES_SIGALE
-from src.db.sql_write_methods import WriteMethods
+from migration_mdps_proeco_sigale.db.sql_write_methods import WriteMethods
 
 
-def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):
 
     ### AJOUT DU CHAMP EID
     enseignants_proeco = enseignants_proeco.assign(
@@ -99,8 +99,8 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
 
     # On exporte si option
     if export:
-        nouveaux_enseignants.to_csv(os.path.join(config.EXPORT_PATH,'mdps_nouveaux.csv'), index=False)
-        enseignants_existants.to_csv(os.path.join(config.EXPORT_PATH,'mdps_existants.csv'), index=False)
+        nouveaux_enseignants.to_csv(os.path.join(config.EXPORT_PATH, 'mdps_nouveaux.csv'), index=False)
+        enseignants_existants.to_csv(os.path.join(config.EXPORT_PATH, 'mdps_existants.csv'), index=False)
 
     # On ajoute les métadonnées
     for key, value in config.SIGALE_METADATA_FIELDS.items():
@@ -128,13 +128,13 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
 
     # On mets à jour les champs des enseignants existants basé sur la config
     enseignants_existants.rename(columns={'personne_id': 'id'}).to_sql('personnes', con=sigale_engine, schema='personnes', index=False, if_exists='append',
-                                 method=WriteMethods(index_columns=['id'], update_columns=config.SIGALE_UPDATE_FIELDS).update_on_conflict)
+                                                                       method=WriteMethods(index_columns=['id'], update_columns=config.SIGALE_UPDATE_FIELDS).update_on_conflict)
     logger.info(f"{len(enseignants_existants)} mdps mis à jour dans Sigale")
 
     return None
 
 
-def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):
 
     # Avec melt, on répartit nos colonnes email et email2 dans des nouvelles lignes
     # On passe d'une structure registre_national, email, email2
@@ -215,16 +215,16 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
 
     # On mets à jour les champs des enseignants existants basé sur la config
     emails_existants.rename(columns={'email_id': 'id'}).to_sql('personne_emails', con=sigale_engine,
-                                                                       schema='personnes', index=False,
-                                                                       if_exists='append',
-                                                                       method=WriteMethods(index_columns=['id'],
-                                                                                           update_columns=config.SIGALE_EMAIL_UPDATE_FIELDS).update_on_conflict)
+                                                               schema='personnes', index=False,
+                                                               if_exists='append',
+                                                               method=WriteMethods(index_columns=['id'],
+                                                                                   update_columns=config.SIGALE_EMAIL_UPDATE_FIELDS).update_on_conflict)
     logger.info(f"{len(emails_existants)} emails mis à jour dans Sigale")
 
     return None
 
 
-def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):
 
     # On ne conserve que les champs définis dans la config
     champs_utilises = [field for field in config.PHONE_FIELDS]
@@ -324,9 +324,9 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 
     # On mets à jour les champs des enseignants existants basé sur la config
     phones_existants.rename(columns={'telephone_id': 'id'}).to_sql('personne_telephones', con=sigale_engine,
-                                                               schema='personnes', index=False,
-                                                               if_exists='append',
-                                                               method=WriteMethods(
+                                                                   schema='personnes', index=False,
+                                                                   if_exists='append',
+                                                                   method=WriteMethods(
                                                                    index_columns=['id'],
                                                                    update_columns=config.SIGALE_PHONE_UPDATE_FIELDS).update_on_conflict)
     logger.info(f"{len(phones_existants)} téléphones mis à jour dans Sigale")
@@ -338,7 +338,7 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
 def split_column_name(col_name:str):
     return col_name.replace('domi', '_domi').replace('resi', '_resi')
 
-def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True):
+def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):
 
     adresses.columns = [split_column_name(col) for col in adresses.columns]
     # On sépare les champs proeco _resi et _domi en lignes différentes
@@ -352,7 +352,7 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
     ).reset_index()
 
     # Si resi ou domi n'est pas dans les champs à importer en config, on supprime
-    adresses.drop(adresses[adresses['type'].apply(lambda x: False if config.ADRESSES_FIELDS.get(x) else True)].index, inplace=True )
+    adresses.drop(adresses[adresses['type'].apply(lambda x: False if config.ADRESSES_FIELDS.get(x) else True)].index, inplace=True)
 
     # On supprime également les adresses vides
     adresses.replace(r'^\s*$', np.nan,  regex=True, inplace=True)
@@ -459,9 +459,9 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
 
     # On mets à jour les champs des enseignants existants basé sur la config
     adresses_existantes.rename(columns={'adresse_id': 'id'}).to_sql('personne_adresses', con=sigale_engine,
-                                                                   schema='personnes', index=False,
-                                                                   if_exists='append',
-                                                                   method=WriteMethods(
+                                                                    schema='personnes', index=False,
+                                                                    if_exists='append',
+                                                                    method=WriteMethods(
                                                                        index_columns=['id'],
                                                                        update_columns=config.SIGALE_ADRESSES_UPDATE_FIELDS).update_on_conflict)
     logger.info(f"{len(adresses_existantes)} adresses mises à jour dans Sigale")

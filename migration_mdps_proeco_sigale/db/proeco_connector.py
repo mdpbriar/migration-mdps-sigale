@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-from config import FIREBIRD_CONNECT_ARGS
+from migration_mdps_proeco_sigale.config import FIREBIRD_CONNECT_ARGS
 
 DB_DRIVER: str = "firebird+fdb"
 

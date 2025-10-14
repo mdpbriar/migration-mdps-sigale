@@ -1,7 +1,5 @@
 from sqlalchemy import text
 
-import config
-
 SQL_MDPS_PROECO = text(f"""
 select
 matric,

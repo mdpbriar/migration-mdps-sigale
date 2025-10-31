@@ -140,6 +140,15 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     # On passe d'une structure registre_national, email, email2
     # à registre_national, champ_proeco(email ou email2), valeur
     personne_emails = personne_emails.melt(id_vars=['personne_id'], value_vars=['email', 'email2'], var_name='champ_proeco', value_name='valeur')
+
+    # On supprime les lignes où la valeur est vide ou nulle
+    personne_emails.drop(
+        personne_emails[
+            (personne_emails['valeur'].isnull())
+            | (personne_emails['valeur'] == '')
+            ].index,
+        inplace=True)
+
     # en partant de la config, on ajoute le type d'email, None si le champ n'est pas dans la config
     personne_emails['code_domaine'] = personne_emails.apply(lambda row: config.EMAILS_FIELDS.get(row['champ_proeco']).get('code_domaine') if row['champ_proeco'] in config.EMAILS_FIELDS else None, axis=1)
     # On supprime là où le champ n'est pas déclaré dans la config
@@ -171,7 +180,10 @@ def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger,
     # Si config pour ne remplacer que les created_by migration
     if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
         personne_emails.drop(
-            personne_emails[personne_emails['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            personne_emails[
+                (personne_emails['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1))
+                    & (personne_emails['_merge'] == 'both')
+            ].index,
             inplace=True)
 
     # Suppression de la colonne created by, utilisée uniquement pour filtrer
@@ -236,6 +248,14 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     phones = phones.melt(id_vars=['personne_id'], value_vars=champs_utilises,
                                            var_name='champ_proeco', value_name='numero')
 
+    # On supprime les lignes où la valeur est vide ou nulle
+    phones.drop(
+        phones[
+            (phones['numero'].isnull())
+            | (phones['numero'] == '')
+            ].index,
+        inplace=True)
+
     # On ajoute les champs tels que définis dans la config
     phones['code_domaine'] = phones.apply(
         lambda row: config.PHONE_FIELDS.get(row['champ_proeco']).get('code_domaine'), axis=1)
@@ -280,7 +300,10 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
         # On écarte les lignes non créées par la migration
         phones.drop(
-            phones[phones['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            phones[
+                (phones['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1))
+                & (phones['_merge'] == 'both')
+            ].index,
             inplace=True)
 
     # Suppression de la colonne created by, utilisée uniquement pour filtrer
@@ -307,7 +330,7 @@ def migrate_phones(phones: pd.DataFrame, sigale_engine, logger: Logger, export:b
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
         logger.info(
-            f"Dry run, pas de modification en DB, {len(nouveaux_phones)} téléphones à insérer, {len(phones_existants)} emails à mettre à jour")
+            f"Dry run, pas de modification en DB, {len(nouveaux_phones)} téléphones à insérer, {len(phones_existants)} téléphones à mettre à jour")
         return None
 
     # On insère les nouveaux téléphones dans Sigale
@@ -421,7 +444,10 @@ def migrate_adresses(adresses: pd.DataFrame, sigale_engine, logger: Logger, expo
     if config.UPDATE_ONLY_CREATED_BY_MIGRATION:
         # On écarte les lignes non créées par la migration
         adresses.drop(
-            adresses[adresses['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1)].index,
+            adresses[
+                (adresses['created_by'] != config.SIGALE_METADATA_FIELDS.get('created_by', 1))
+                & (adresses['_merge'] == 'both')
+            ].index,
             inplace=True)
 
     # Suppression de la colonne created by, utilisée uniquement pour filtrer

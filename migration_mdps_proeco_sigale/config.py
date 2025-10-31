@@ -168,10 +168,10 @@ ADRESSES_FIELDS: Dict[Literal['domi', 'resi'], Dict] = {
 }
 
 # Chemin de fichier pour les exports
-EXPORT_PATH:str = '../exports'
+EXPORT_PATH:str = 'exports'
 
 # fichier de logs
-LOGS_FILE: str = '../logs/logs_migration.log'
+LOGS_FILE: str = 'logs/logs_migration.log'
 
 
 

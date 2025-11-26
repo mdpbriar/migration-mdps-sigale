@@ -8,6 +8,13 @@ from unidecode import unidecode
 # Options de connection à Firebird
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
 
+
+# Code culture par défaut des utilisateurs
+USERS_DEFAULT_CULTURE_CODE = 'fr'
+
+# Code du rôle par défaut des nouveaux utilisateurs
+USERS_DEFAULT_ROLE_CODE = 'unknown'
+
 # Champs et valeurs par défaut dans la table personnes de Sigale
 # Le numéro dans created_by sera aussi utilisé pour filtrer les lignes à remplacer, le
 # script de migration ne modifiera que les numéros, téléphones et adresses

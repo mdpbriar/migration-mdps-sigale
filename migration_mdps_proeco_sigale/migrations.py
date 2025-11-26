@@ -3,11 +3,13 @@ from logging import Logger
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import Engine
 from unidecode import unidecode
 
 from migration_mdps_proeco_sigale import config as default_config
-from migration_mdps_proeco_sigale.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, SQL_PHONES_SIGALE, \
-    SQL_ADRESSES_SIGALE
+from migration_mdps_proeco_sigale.db.requetes_sql import SQL_PARAMETER_SIGALE, SQL_MDPS_SIGALE, SQL_EMAILS_SIGALE, \
+    SQL_PHONES_SIGALE, \
+    SQL_ADRESSES_SIGALE, SQL_EIDS_MDPS_SIGALE, SQL_UTILISATEURS_SIGALE, SQL_DEFAULT_ROLE, SQL_DEFAULT_CULTURE
 from migration_mdps_proeco_sigale.db.sql_write_methods import WriteMethods
 
 
@@ -132,6 +134,77 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
     logger.info(f"{len(enseignants_existants)} mdps mis à jour dans Sigale")
 
     return None
+
+
+def migrate_users(mdps:pd.DataFrame, sigale_engine: Engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):
+
+    mdps_sigale = pd.read_sql_query(SQL_EIDS_MDPS_SIGALE, sigale_engine)
+
+    # On limite aux mdps nouvellement récupérés:
+    mdps_sigale = mdps_sigale.merge(mdps, how='inner', on='personne_id')
+    # On ne garde que eid et display_name
+    mdps_sigale = mdps_sigale[['eid', 'display_name']]
+
+    # On récupère les utilisateurs existants
+    utilisateurs_existants = pd.read_sql_query(SQL_UTILISATEURS_SIGALE, sigale_engine)
+
+    # On recoupe pour ne conserver que les nouveaux utilisateurs parmi les personnes dans Sigale
+    mdps_utilisateurs = mdps_sigale.merge(utilisateurs_existants, how='left', on='eid', indicator=True)
+    nouveaux_utilisateurs = mdps_utilisateurs[mdps_utilisateurs['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+    # On mets les eid dans les bons champs et on supprime le champ eid
+    nouveaux_utilisateurs['technical_id'] = nouveaux_utilisateurs['eid']
+    nouveaux_utilisateurs['business_id'] = nouveaux_utilisateurs['eid']
+    nouveaux_utilisateurs['is_active'] = True
+
+    nouveaux_utilisateurs.drop(columns=['eid'], inplace=True)
+
+    # On récupère l'id du rôle par défaut
+    with sigale_engine.connect() as conn:
+        result = conn.execute(SQL_DEFAULT_ROLE, parameters={'code': config.USERS_DEFAULT_ROLE_CODE})
+        default_role_id = result.scalar_one_or_none()
+
+        nouveaux_utilisateurs['default_role_id'] = default_role_id
+
+
+    with sigale_engine.connect() as conn:
+        result = conn.execute(SQL_DEFAULT_CULTURE, parameters={'code': config.USERS_DEFAULT_CULTURE_CODE})
+        default_culture_id = result.scalar_one_or_none()
+
+        nouveaux_utilisateurs['culture_id'] = default_culture_id
+
+    # On ajoute les métadonnées
+    for key, value in config.SIGALE_METADATA_FIELDS.items():
+        nouveaux_utilisateurs[key] = value
+
+    # On exporte si option
+    if export:
+        nouveaux_utilisateurs.to_csv(os.path.join(config.EXPORT_PATH, 'utilisateurs_nouveaux.csv'), index=False)
+
+    logger.info(
+        f"Dry run, pas de modification en DB, {len(nouveaux_utilisateurs)} utilisateurs à insérer")
+
+    # Sinon on créé en DB:
+    with sigale_engine.begin() as conn:
+        # On insère les nouveaux utilisateurs dans Sigale
+        nouveaux_utilisateurs.to_sql('oauth_users', con=conn, schema='core', index=False, if_exists='append')
+
+        # On récupère les ids utilisateurs
+        id_nouveaux_utilisateurs = pd.read_sql_query("select technical_id, id as user_id from core.oauth_users", conn)
+        # On merge avec les nouveaux utilisateurs
+        nouveaux_utilisateurs = nouveaux_utilisateurs.merge(id_nouveaux_utilisateurs, on='technical_id', how='inner')
+
+        # On récupère les colonnes qui nous intéresse et on renomme pour marcher avec la table oauth_users_roles_roles
+        oauth_users_roles = nouveaux_utilisateurs[['default_role_id', 'user_id']].copy()
+        oauth_users_roles.rename(columns={'default_role_id': 'rolesId', 'user_id': 'oauthUsersId'}, inplace=True)
+        oauth_users_roles.to_sql('oauth_users_roles_roles', conn, schema='core', index=False, if_exists='append')
+
+        if dry_run:
+            conn.rollback()
+        else:
+            conn.commit()
+            logger.info(f"{len(nouveaux_utilisateurs)} nouveaux utilisateurs introduits dans Sigale")
+
 
 
 def migrate_emails(personne_emails: pd.DataFrame, sigale_engine, logger: Logger, export:bool = False, dry_run:bool = False, update:bool = True, config = default_config):

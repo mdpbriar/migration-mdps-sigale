@@ -4,6 +4,12 @@ from typing import Dict, Literal
 # Options de connection à Firebird
 FIREBIRD_CONNECT_ARGS:dict = {"charset" : "ISO8859_1"}
 
+# Code culture par défaut des nouveaux utilisateurs
+USERS_DEFAULT_CULTURE_CODE = 'fr'
+
+# Code du rôle par défaut des nouveaux utilisateurs
+USERS_DEFAULT_ROLE_CODE = 'unknown'
+
 # Champs et valeurs par défaut dans la table personnes de Sigale
 # Le numéro dans created_by sera aussi utilisé pour filtrer les lignes à remplacer, le
 # script de migration ne modifiera que les numéros, téléphones et adresses créées par lui-même
@@ -169,7 +175,7 @@ LOGS_FILE: str = '../logs/logs_migration.log'
 
 # Fonction qui calcule le EID en fonction des champs de Proeco
 # Vous pouvez utiliser n'importe quelle colonne présente dans la liste
-# attributs_personne dans main.py:135
+# attributs_personne dans run.py:75
 def get_eid(row: Dict) -> str:
     # pour l'exemple, ici l'EID est concaténé depuis les champs matric et reserved
     return str(row['matric']) + str(row['reserved'])

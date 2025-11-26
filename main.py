@@ -64,6 +64,8 @@ def main():
                         help="Tester la synchro, n'importe pas en db")
     parser.add_argument('--no-update', action='store_false', dest='update', default=True,
                         help="N'ajoute que les nouveaux enseignants, pas de mise à jour")
+    parser.add_argument('--create-users', action='store_true', dest='create_users', default=False,
+                        help="Créé les utilisateurs en même temps")
     parser.add_argument('--no-stdout', action='store_false', dest='stdout', default=True, help="Pas d'impression des logs dans stdout")
     parser.add_argument('--no-logfile', action='store_false', dest='logfile', default=True,
                         help="Pas d'impression des logs dans le fichier")
@@ -81,6 +83,7 @@ def main():
     export = args.export
     dry_run = args.dry_run
     update = args.update
+    create_users = args.create_users
 
     # On initie le connecteur Proeco
     proeco_connector = ProecoConnector('PROF.FDB')
@@ -100,6 +103,7 @@ def main():
         sigale_engine=sigale_engine,
         logger=logger,
         contrat_en_cours_uniquement=contrat_en_cours_uniquement,
+        create_users=create_users,
         action_when_duplicates=action_when_duplicates,
         dry_run=dry_run,
         update=update,

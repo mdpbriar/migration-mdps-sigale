@@ -56,6 +56,20 @@ where est_membre_personnel = true
 and registre_national_numero is not null
 """)
 
+SQL_EIDS_MDPS_SIGALE = text("""
+select CONCAT(INITCAP(prenom), ' ', UPPER(nom)) as display_name, eid, id as personne_id
+from personnes.personnes
+where est_membre_personnel = true
+and est_collaborateur_rh = true
+ and registre_national_numero != ''
+and registre_national_numero is not null
+""")
+
+SQL_UTILISATEURS_SIGALE = text("""
+select technical_id as eid
+from core.oauth_users
+""")
+
 SQL_PARAMETER_SIGALE = text("""
 select pv.id, pv.code
 from core.parameter_values pv
@@ -84,3 +98,14 @@ from personnes.personne_adresses a
 where p.est_membre_personnel = true
 """)
 
+SQL_DEFAULT_CULTURE = text("""
+select id as culture_id
+from core.i18n_cultures
+    where code = :code
+""")
+
+SQL_DEFAULT_ROLE = text("""
+select id as role_id
+from core.roles
+    where code = :code
+""")

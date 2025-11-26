@@ -7,7 +7,8 @@ from sqlalchemy import Engine
 from migration_mdps_proeco_sigale import config as default_config
 from migration_mdps_proeco_sigale.date_utils import DateUtils
 from migration_mdps_proeco_sigale.db.requetes_sql import SQL_MDPS_PROECO, SQL_CONTRATS_EN_COURS_PROECO, SQL_MDPS_SIGALE
-from migration_mdps_proeco_sigale.migrations import migrate_personnes, migrate_emails, migrate_phones, migrate_adresses
+from migration_mdps_proeco_sigale.migrations import migrate_personnes, migrate_emails, migrate_phones, migrate_adresses, \
+    migrate_users
 
 
 def run_migrations(
@@ -17,6 +18,7 @@ def run_migrations(
         action_when_duplicates: Literal['drop', 'stop'] = 'stop',
         export: bool = False,
         contrat_en_cours_uniquement:bool = True,
+        create_users: bool = False,
         update: bool = False,
         dry_run: bool = False,
         config = default_config
@@ -29,6 +31,7 @@ def run_migrations(
     :param action_when_duplicates: action en cas de doublons, par défaut arrête la migration, 'drop' permet de les supprimer
     :param export: permet d'exporter les données en csv
     :param contrat_en_cours_uniquement: Si on traite uniquement les contrats en cours
+    :param create_users: Créé les utilisateurs manquants après création des personnes
     :param update: si on update les mdps existants
     :param dry_run: Permet de tester, on insère pas les données en DB
     :param config: permet d'importer un autre fichier de configuration
@@ -73,11 +76,16 @@ def run_migrations(
                            'registre_national_numero', 'date_naissance', 'matriche', 'reserved']
     migrate_personnes(enseignants_proeco[attributs_personnes], sigale_engine, logger, export, dry_run, update, config=config)
 
+
     ## AJOUT DES ID PERSONNES
     # On récupère les personnes existantes dans Sigale
     personnes = pd.read_sql_query(SQL_MDPS_SIGALE, sigale_engine)
     # On ajoute les ids dans les emails
     enseignants_proeco = enseignants_proeco.merge(personnes, on='registre_national_numero', how='inner', validate='m:1')
+
+    # Si création des utilisateurs
+    if create_users:
+        migrate_users(enseignants_proeco, sigale_engine, logger, export, dry_run, update, config=config)
 
     # On migre les emails, gestion de l'ajout/mise à jour dans personnes.personne_emails
     attributs_emails = ['personne_id', 'email', 'email2']

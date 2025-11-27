@@ -37,6 +37,8 @@ Ex:
 > 
 > copier `config.exemple.py` en `config.py` dans le dossier racine
 
+**En cas d'oubli de la copie du fichier de config, la config par défaut est utilisée**
+
 Tester les connections aux bases de données avec `python main.py test` ( ou `uv run main.py test`) 
 
 ### Utilisation

@@ -2,8 +2,11 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Literal
 import argparse
-
-from migration_mdps_proeco_sigale import config
+try:
+    import config
+except ImportError:
+    print("WARNING: Vous n'avez pas de configuration custom ! Utilisation de la configuration par défaut !")
+    from migration_mdps_proeco_sigale import config
 import logging
 from migration_mdps_proeco_sigale.db.proeco_connector import ProecoConnector
 import sys
@@ -108,6 +111,7 @@ def main():
         dry_run=dry_run,
         update=update,
         export=export,
+        config=config
 
     )
 

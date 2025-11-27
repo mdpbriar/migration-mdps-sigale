@@ -35,7 +35,7 @@ Ex:
 > 
 > copier `.env.exemple` en `.env` et saisir les identifiants de connexion
 > 
-> copier `config.exemple.py` en `config.py`
+> copier `config.exemple.py` en `config.py` dans le dossier racine
 
 Tester les connections aux bases de données avec `python main.py test` ( ou `uv run main.py test`) 
 

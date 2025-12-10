@@ -42,7 +42,10 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
 
     ### AJOUT DES PAYS_ID_NAISSANCE_PAYS
     # On reformate les codes pays dans notre liste d'enseignants, majuscules, suppression d'accents
-    enseignants_proeco['paynaiss'] = enseignants_proeco['paynaiss'].apply(str.upper).apply(unidecode).apply(str.strip)
+    enseignants_proeco['paynaiss'] = enseignants_proeco['paynaiss'].apply(
+        lambda x: unidecode(str(x).upper()).strip() if pd.notna(x) else None
+    )
+                                      # .apply(str.upper).apply(unidecode).apply(str.strip))
     # On renome l'id pour correspondre à la clé étrangère dans personnes.personnes
     pays_sigale.rename(columns={'pays_id_nationalite': 'pays_id_naissance_pays', 'code_pays': 'paynaiss'}, inplace=True)
     enseignants_proeco = enseignants_proeco.merge(pays_sigale, on='paynaiss', how='left', validate='m:1')
@@ -53,8 +56,12 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
         "select id as city_id_naissance, name as city_name from core.cities order by postal_code asc", sigale_engine)
     villes_sigale['code_pays'] = 'BE'
     # On reformate les noms de villes pour s'assurer du match
-    villes_sigale['city_name'] = villes_sigale['city_name'].apply(str.upper).apply(unidecode).apply(str.strip)
-    enseignants_proeco['lieunaiss'] = enseignants_proeco['lieunaiss'].apply(str.upper).apply(unidecode).apply(str.strip)
+    villes_sigale['city_name'] = villes_sigale['city_name'].apply(
+        lambda x: unidecode(str(x).upper()).strip() if pd.notna(x) else None
+    )
+    enseignants_proeco['lieunaiss'] = enseignants_proeco['lieunaiss'].apply(
+        lambda x: unidecode(str(x).upper()).strip() if pd.notna(x) else None
+    )
 
     # On supprime les doublons, (plusieurs fois la même ville avec codes postaux différents)
     # keep first, pour garder le code postal le plus petit (on conserve 4000 au lieu de 4020)

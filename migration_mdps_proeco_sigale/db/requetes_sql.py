@@ -52,8 +52,8 @@ or DATEFIN is NULL
 SQL_MDPS_SIGALE = text("""
 select registre_national_numero, id as personne_id
 from personnes.personnes
-where est_membre_personnel = true
- and registre_national_numero != ''
+where registre_national_numero != ''
+-- and est_membre_personnel = true
 and registre_national_numero is not null
 """)
 

@@ -37,6 +37,8 @@ datnaiss as date_naissance
 from PERSONNE
 where regnat1 is not null
 and regnat1 != ''
+and datnaiss is not null
+and datnaiss != ''
 and CHAR_LENGTH(regnat1) = 11
 order by matric
 """)

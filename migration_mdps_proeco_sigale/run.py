@@ -9,6 +9,7 @@ from migration_mdps_proeco_sigale.date_utils import DateUtils
 from migration_mdps_proeco_sigale.db.requetes_sql import SQL_MDPS_PROECO, SQL_CONTRATS_EN_COURS_PROECO, SQL_MDPS_SIGALE
 from migration_mdps_proeco_sigale.migrations import migrate_personnes, migrate_emails, migrate_phones, migrate_adresses, \
     migrate_users
+from migration_mdps_proeco_sigale.tools import clean_numero_registre_national
 
 
 def run_migrations(
@@ -43,7 +44,10 @@ def run_migrations(
     enseignants_proeco = pd.read_sql_query(SQL_MDPS_PROECO, proeco_engine, dtype={'registre_national_numero': str})
 
     # On nettoie le numéro de registre national des éventuels espaces inutiles
-    enseignants_proeco['registre_national_numero'] = enseignants_proeco['registre_national_numero'].str.strip()
+    enseignants_proeco['registre_national_numero'] = enseignants_proeco['registre_national_numero'].apply(clean_numero_registre_national)
+
+    # On ne garde que les lignes où le numéro de registre national est 11
+    enseignants_proeco = enseignants_proeco[enseignants_proeco['registre_national_numero'].str.len() == 11]
 
     # Si option pour ne prendre que les contrats en cours
     if contrat_en_cours_uniquement:

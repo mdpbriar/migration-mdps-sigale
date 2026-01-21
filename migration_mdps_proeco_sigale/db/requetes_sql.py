@@ -38,6 +38,7 @@ from PERSONNE
 where regnat1 is not null
 and regnat1 != ''
 and datnaiss is not null
+and datnaiss > 0
 -- and CHAR_LENGTH(regnat1) = 11
 order by matric
 """)

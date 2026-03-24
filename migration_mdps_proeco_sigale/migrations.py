@@ -119,6 +119,7 @@ def migrate_personnes(enseignants_proeco: pd.DataFrame, sigale_engine, logger: L
     # On ajoute les champs par défaut de Proeco
     for key, value in config.SIGALE_PERSONNES_DEFAULT_FIELDS.items():
         nouveaux_enseignants[key] = value
+        enseignants_existants[key] = value
 
     # Si dry_run, on s'arrête avant les modifications en DB
     if dry_run:
